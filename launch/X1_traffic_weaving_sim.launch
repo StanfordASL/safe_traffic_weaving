@@ -1,0 +1,33 @@
+<launch>
+
+    <arg name="human" default="/xbox_car" />
+    <arg name="robot" default="/x1" />
+    <arg name="roadway" default="west_paddock" />
+    <arg name="hwy_start_frac" default="0.3" />
+    <arg name="hwy_split_frac" default="0.8" />
+    <arg name="time_scale_factor" default="0.5" />
+    <arg name="map_origin_frame" default="roadway/start_mid" />
+
+    <include file="$(find safe_traffic_weaving)/launch/lane_weaving.launch">
+        <arg name="human"             value="$(arg human)" />
+        <arg name="robot"             value="$(arg robot)" />
+        <arg name="roadway"           value="$(arg roadway)" />
+        <arg name="hwy_start_frac"    value="$(arg hwy_start_frac)" />
+        <arg name="hwy_split_frac"    value="$(arg hwy_split_frac)" />
+        <arg name="time_scale_factor" value="$(arg time_scale_factor)" />
+        <arg name="map_origin_frame"  value="$(arg map_origin_frame)" />
+    </include>
+
+    <node
+        pkg="osprey"
+        type="osprey_sim"
+        name="osprey_sim"
+        output="screen"
+        args="-t 10000.0"
+    />
+
+    <include file="$(find safe_traffic_weaving)/launch/traffic_weaving_policy.launch">
+        <arg name="model" value="$(find safe_traffic_weaving)/models/traffic_weaving_prediction" />
+    </include>
+
+</launch>

@@ -1,0 +1,3 @@
+# Should be overwritten by multi_velodyne_static_registration.py
+{FL_VLP16_args: 0 0 0 0 0 0 1 vehicle_base FL_velodyne 100,
+ FR_VLP16_args: 0 0 0 0 0 0 1 vehicle_base FR_velodyne 100}

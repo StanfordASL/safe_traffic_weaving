@@ -1,0 +1,13 @@
+Header header
+float64[] t
+float64[] s
+float64[] V
+float64[] A
+float64[] E
+float64[] N
+float64[] heading
+float64[] curvature
+float64[] grade
+float64[] bank
+float64[] edge_L
+float64[] edge_R

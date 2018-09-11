@@ -1,0 +1,5 @@
+<launch>
+    <arg name="model" default=""/>
+    <param name="model" value="$(arg model)"/>
+    <node pkg="safe_traffic_weaving" name="scoring" type="cvae_node_hop_scoring.py" output="screen"/>
+</launch>

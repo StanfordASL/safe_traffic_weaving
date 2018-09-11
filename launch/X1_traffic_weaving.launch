@@ -1,0 +1,82 @@
+<launch>
+
+    <arg name="human" default="/xbox_car" />
+    <arg name="robot" default="/x1" />
+    <arg name="roadway" default="west_paddock" />
+    <arg name="hwy_start_frac" default="0.3" />
+    <arg name="hwy_split_frac" default="0.8" />
+    <arg name="time_scale_factor" default="0.5" />
+    <arg name="map_origin_frame" default="roadway/start_mid" />
+
+    <param name="human" value="$(arg human)" />
+    <param name="robot" value="$(arg robot)" />
+    <rosparam command="load" ns="roadway" file="$(find safe_traffic_weaving)/roadways/$(arg roadway).yaml" />
+    <param name="hwy_start_frac" value="$(arg hwy_start_frac)" />
+    <param name="hwy_split_frac" value="$(arg hwy_split_frac)" />
+    <param name="time_scale_factor" value="$(arg time_scale_factor)" />
+
+    <node
+        pkg="tf"
+        type="static_transform_publisher"
+        name="X1_to_velodyne"
+        args="0 0 0 0 0 0 1 x1 velodyne 100"
+    />
+
+    <node
+        pkg="safe_traffic_weaving"
+        type="viz_roadway.py"
+        name="roadway_visualization"
+    />
+
+    <node
+        pkg="safe_traffic_weaving"
+        type="satellite_map_gps_pub.py"
+        name="satellite_map_gps_pub"
+        args="/roadway/gps_ref $(arg map_origin_frame)"
+    />
+
+    <node
+        pkg="safe_traffic_weaving"
+        type="x1_state_republisher.py"
+        name="x1_state_republisher"
+    />
+
+    <node
+        pkg="safe_traffic_weaving"
+        type="traffic_weaving_translator.py"
+        name="traffic_weaving_translator"
+        output="screen"
+    />
+
+    <node
+        pkg="safe_traffic_weaving"
+        type="viz_vehicle.py"
+        name="x1_visualization"
+        args="x1 3.79 1.87 0.095 red"
+    />
+
+    <node
+        pkg="safe_traffic_weaving"
+        type="viz_nominal_traj.py"
+        name="nominal_trajectory_visualization"
+    />
+
+    <node
+        pkg="safe_traffic_weaving"
+        type="pub_nominal_path.py"
+        name="experiment_start_pub"
+    />
+
+    <node pkg="joy" type="joy_node" name="xbox_joystick">
+        <param name="autorepeat_rate" value="30.0" />
+        <param name="deadzone" value="0.2" />
+    </node>
+
+    <node
+        pkg="rviz"
+        type="rviz"
+        name="rviz_visualization"
+        args="-d $(find safe_traffic_weaving)/rviz/lane_weaving.rviz"
+    />
+
+</launch>
