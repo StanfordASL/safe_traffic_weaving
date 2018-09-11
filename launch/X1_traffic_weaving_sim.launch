@@ -8,7 +8,7 @@
     <arg name="time_scale_factor" default="0.5" />
     <arg name="map_origin_frame" default="roadway/start_mid" />
 
-    <include file="$(find safe_traffic_weaving)/launch/traffic_weaving.launch">
+    <include file="$(find safe_traffic_weaving)/launch/X1_traffic_weaving.launch">
         <arg name="human"             value="$(arg human)" />
         <arg name="robot"             value="$(arg robot)" />
         <arg name="roadway"           value="$(arg roadway)" />
