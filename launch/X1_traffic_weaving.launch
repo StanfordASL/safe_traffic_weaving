@@ -76,7 +76,7 @@
         pkg="rviz"
         type="rviz"
         name="rviz_visualization"
-        args="-d $(find safe_traffic_weaving)/rviz/lane_weaving.rviz"
+        args="-d $(find safe_traffic_weaving)/rviz/traffic_weaving.rviz"
     />
 
 </launch>
