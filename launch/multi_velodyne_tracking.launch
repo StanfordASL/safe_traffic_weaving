@@ -1,0 +1,26 @@
+<launch>
+
+    <include file="$(find safe_traffic_weaving)/launch/multi_velodyne_points.launch" />
+
+    <node
+        pkg="tf"
+        type="static_transform_publisher"
+        name="X1_to_vehicle_base"
+        args="0 0 0 0 0 0 1 x1 vehicle_base 100"
+    />
+
+    <node
+        pkg="safe_traffic_weaving"
+        type="viz_vehicle.py"
+        name="tracked_object_visualization"
+        args="tracked_object 3.79 1.87 0.095 blue"
+    />
+
+    <node
+        pkg="safe_traffic_weaving"
+        type="multi_velodyne_object_tracking.py"
+        name="object_tracking"
+        args="100"
+    />
+
+</launch>
