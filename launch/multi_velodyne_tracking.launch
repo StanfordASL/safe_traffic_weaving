@@ -2,6 +2,38 @@
 
     <include file="$(find safe_traffic_weaving)/launch/multi_velodyne_points.launch" />
 
+    <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" />
+
+    <node pkg="nodelet" type="nodelet" name="M_intensity_filter" args="load pcl/PassThrough pcl_manager" output="screen">
+        <remap from="~input" to="/M_HDL32/velodyne_points" />
+        <rosparam>
+            filter_field_name: intensity
+            filter_limit_min: 50
+            filter_limit_max: 1000
+            filter_limit_negative: False
+        </rosparam>
+    </node>
+
+    <node pkg="nodelet" type="nodelet" name="FL_intensity_filter" args="load pcl/PassThrough pcl_manager" output="screen">
+        <remap from="~input" to="/FL_VLP16/velodyne_points" />
+        <rosparam>
+            filter_field_name: intensity
+            filter_limit_min: 50
+            filter_limit_max: 1000
+            filter_limit_negative: False
+        </rosparam>
+    </node>
+
+    <node pkg="nodelet" type="nodelet" name="FR_intensity_filter" args="load pcl/PassThrough pcl_manager" output="screen">
+        <remap from="~input" to="/FR_VLP16/velodyne_points" />
+        <rosparam>
+            filter_field_name: intensity
+            filter_limit_min: 50
+            filter_limit_max: 1000
+            filter_limit_negative: False
+        </rosparam>
+    </node>
+
     <node
         pkg="tf"
         type="static_transform_publisher"
