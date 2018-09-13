@@ -64,9 +64,13 @@ class x1lidar:
         # self.x1_marker_pub = rospy.Publisher("/x1/marker", Marker, queue_size=10)
         rospy.Subscriber("/x1/pose", PoseStamped, self.x1_position)
         rospy.Subscriber("/move_base_simple/goal", PoseStamped, self.initialize_trackedObject)
-        rospy.Subscriber("/M_HDL32/velodyne_points", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
-        rospy.Subscriber("/FL_VLP16/velodyne_points", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
-        rospy.Subscriber("/FR_VLP16/velodyne_points", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
+        
+        # rospy.Subscriber("/M_HDL32/velodyne_points", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
+        rospy.Subscriber("/M_intensity_filter/output", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
+        # rospy.Subscriber("/FL_VLP16/velodyne_points", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
+        rospy.Subscriber("/FL_intensity_filter/output", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
+        # rospy.Subscriber("/FR_VLP16/velodyne_points", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
+        rospy.Subscriber("/FR_intensity_filter/output", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
 
         # pc array marker
         self.pc_marker = Marker()
@@ -138,7 +142,6 @@ class x1lidar:
         msg_time = msg.header.stamp
         msg_frame = msg.header.frame_id
         self.prev_time = msg.header.stamp.to_time()
-        
         try:
             self.tf_listener.waitForTransform("/world", msg_frame, msg_time, rospy.Duration(.5))
             pose_world = self.tf_listener.transformPose("/world", msg)
@@ -200,7 +203,7 @@ class x1lidar:
 
 
     # tracking the other car
-    def pc2_callback(self, msg, min_points = 2, vel_tol = 5E-2, alpha = 0.2, sd = 3.0):
+    def pc2_callback(self, msg, min_points = 2, vel_tol = 0.1, alpha = 0.95, sd = 3.0):
         intensity_max = 500
         
         if self.processing:
@@ -304,7 +307,7 @@ class x1lidar:
                 obs_velodyne_point.header.stamp = msg_time
                 obs_velodyne_point.point.x = obs_velodyne[0]
                 obs_velodyne_point.point.y = obs_velodyne[1]
-                obs_world_point = self.tf_listener.transformPoint("/world", obs_velodyne_point)
+                # obs_world_point = self.tf_listener.transformPoint("/world", obs_velodyne_point)
                 try:
                     self.tf_listener.waitForTransform("/world", msg_frame, msg_time, rospy.Duration(.05))
                     obs_world_point = self.tf_listener.transformPoint("/world", obs_velodyne_point)
@@ -321,12 +324,13 @@ class x1lidar:
             self.var = var
             pos = Position(list(mean))
             theta = np.arctan2(mean[3], mean[2])
-            theta0 = euler_from_quaternion(self.trackedObjectState.orientation.to_list())[2]
+            # theta0 = euler_from_quaternion(self.trackedObjectState.orientation.to_list())[2]
             # if angle changes too much, keep the same as before
-            if pos.xd**2 + pos.yd**2 < vel_tol and self.diff_angle(theta, theta0) > 0.2:
-                ori = Orientation(quaternion_from_euler(0.0, 0.0, theta0*alpha + theta*(1-alpha)))
-            else:
-                ori = Orientation(quaternion_from_euler(0.0, 0.0, theta))
+            # if pos.xd**2 + pos.yd**2 < vel_tol and self.diff_angle(theta, theta0) > 0.1:
+            # if self.diff_angle(theta, theta0) > 0.1:
+            #     ori = Orientation(quaternion_from_euler(0.0, 0.0, theta0*alpha + theta*(1-alpha)))
+            # else:
+            ori = Orientation(quaternion_from_euler(0.0, 0.0, theta))
 
             # update the position and orientation of the tracked_object
             # self.trackedObjectState = State(pos, ori, '/world')
@@ -368,12 +372,12 @@ class x1lidar:
         return dAdx
 
     def obs_noise_covariance(self):
-        return 0.25*np.eye(2)
+        return 0.09*np.eye(2)
 
     def process_noise_covariance(self):
-        v = [0.001, 0.001, 0.01, 0.01, 0.25, 0.25]
+        v = [0.000001, 0.000001, 0.000001, 0.000001, 0.25, 0.25]
         # v = np.ones(6)*0.01
-        return np.diag([v])
+        return np.diag(v)
 
     def step_dynamics(self, state, control= [0,0]):
         x, y, xd, yd, xdd, ydd = state[0], state[1], state[2], state[3], state[4], state[5]
@@ -387,7 +391,7 @@ class x1lidar:
         return np.array([x, y, xd, yd, xdd, ydd])
 
     def control_noise_in_control_space(self):
-        return 100*np.eye(2)
+        return 64*np.eye(2)
 
     def observation_jacobian(self):
         j = np.zeros([2, 6])
@@ -404,12 +408,11 @@ class x1lidar:
         self.R = self.process_noise_covariance()     # constant
         self.M = self.control_noise_in_control_space()   # constant
         self.H = self.observation_jacobian()
-        self.G = self.dAdx()
-        self.V = self.dAdu()
         self.O = self.obs_noise_covariance()
 
     def EKF(self, mean, var, obs, control = [0,0]):
-
+        self.G = self.dAdx()
+        self.V = self.dAdu()
         # mean is [6,1]
         # var is [6,6]
         # obs = [2,1]
@@ -418,19 +421,20 @@ class x1lidar:
         G, V = self.G, self.V
         # [6,6], [6,2]
         mean_bar = self.step_dynamics(mean, control)
-        var_bar = np.matmul(G, np.matmul(var, np.transpose(G))) + R + np.matmul(V, np.matmul(M, np.transpose(V)))
+        var_bar = G.dot(var).dot(G.T) + R*self.dt + V.dot(M).dot(V.T)*self.dt
         # [6,6][6,6][6,6] + [6,6] + [6,2][2,2][2,6]
-        p = np.linalg.inv(np.matmul(H, np.matmul(var_bar, np.transpose(H))) + O)
+        S = H.dot(var_bar).dot(H.T) + O
         # ([2,6][6,6][6,2] + [2,2])**-1 = [2,2]
-        K = np.matmul(var_bar, np.matmul(np.transpose(H), p))
+        K = var_bar.dot(H.T).dot(np.linalg.inv(S))
         # [6,6][6,2][2,2]
         # K is [6,2]
         if obs is not None:
-            mean_next = mean_bar + np.matmul(K, obs - self.observe(mean_bar))
+            mean_next = mean_bar + K.dot(obs - self.observe(mean_bar))
         else:
             mean_next = mean_bar
         # [6,1] + [6,2][2,1]
-        var_next = var_bar - np.matmul(K, np.matmul(H, var_bar)) 
+        # var_next = var_bar - np.matmul(K, np.matmul(H, var_bar))
+        var_next = var_bar - K.dot(S).dot(K.T)
         # [6,6] - [6,2][2,6][6,6]
         return mean_next, var_next
 
