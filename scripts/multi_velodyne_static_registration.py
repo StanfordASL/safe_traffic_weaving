@@ -22,7 +22,7 @@ def transform_and_convert_to_pcl(pc2_cloud, transform):
     quat = quaternion_as_list(transform.rotation)
     A = tf.transformations.translation_matrix(trans).dot(tf.transformations.quaternion_matrix(quat))
     raw_points_list = [A.dot((p[0], p[1], p[2], 1.0))[:3] for p in pc2.read_points(pc2_cloud, field_names=("x", "y", "z"), skip_nans=True)]
-    points_list = [p for p in raw_points_list if p[2] > .1]
+    points_list = [p for p in raw_points_list if p[2] > .1 and np.hypot(p[0], p[1]) > 5]
 
     pcl_data = pcl.PointCloud()
     pcl_data.from_list(points_list)
