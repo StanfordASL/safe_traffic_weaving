@@ -54,7 +54,7 @@ class x1lidar:
         # rospy.Subscriber("from_veh", fromVehicle, self.egocar_callback)
 
         # in world frame
-        self.trackedObject_pose_pub = rospy.Publisher("/tracked_object/pos", PoseStamped, queue_size=10)
+        self.trackedObject_pose_pub = rospy.Publisher("/tracked_object/pose", PoseStamped, queue_size=10)
         self.trackedObject_vel_pub = rospy.Publisher("/tracked_object/vel", TwistStamped, queue_size=10)
         self.trackedObject_accel_pub = rospy.Publisher("/tracked_object/acc", AccelStamped, queue_size=10)
         self.relevant_pc = rospy.Publisher("/tracked_object/pc_viz", Marker, queue_size=10)
