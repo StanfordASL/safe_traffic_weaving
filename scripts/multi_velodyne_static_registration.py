@@ -22,7 +22,9 @@ def transform_and_convert_to_pcl(pc2_cloud, transform):
     quat = quaternion_as_list(transform.rotation)
     A = tf.transformations.translation_matrix(trans).dot(tf.transformations.quaternion_matrix(quat))
     raw_points_list = [A.dot((p[0], p[1], p[2], 1.0))[:3] for p in pc2.read_points(pc2_cloud, field_names=("x", "y", "z"), skip_nans=True)]
-    points_list = [p for p in raw_points_list if p[2] > .1 and np.hypot(p[0], p[1]) > 5]
+    points_list = [p for p in raw_points_list if (1 < p[2] < 4 and
+                                                  2.5 < np.hypot(p[0], p[1]) < 20 and
+                                                  np.abs(np.arctan2(p[1], p[0])) < np.pi/4)]
 
     pcl_data = pcl.PointCloud()
     pcl_data.from_list(points_list)
@@ -37,8 +39,10 @@ def apply_delta_to_transform(D, transform):
     return (tf.transformations.translation_from_matrix(B),
             tf.transformations.quaternion_from_matrix(B))
 
-def plot_pcl(cloud, dims=(0,1)):
-    plt.scatter([p[dims[0]] for p in cloud.to_list()], [p[dims[1]] for p in cloud.to_list()], s=.1)
+def plot_pcl(cloud, dims=(0,1), label=None):
+    plt.scatter([p[dims[0]] for p in cloud.to_list()],
+                [p[dims[1]] for p in cloud.to_list()],
+                s=.1, label=label)
 
 class MultiVelodyneRegistration:
 
@@ -121,16 +125,28 @@ class MultiVelodyneRegistration:
             yaml.dump(calibration_dict, f)
 
         plt.figure()
-        plot_pcl(M_HDL32_PCL)
-        plot_pcl(FL_VLP16_PCL)
-        plot_pcl(FR_VLP16_PCL)
+        plot_pcl(M_HDL32_PCL, label="M_HDL32")
+        plot_pcl(FL_VLP16_PCL, label="FL_VLP16")
+        plot_pcl(FR_VLP16_PCL, label="FR_VLP16")
+        plt.title("uncalibrated")
+        plt.axis("equal")
+        leg = plt.legend()
+        leg.legendHandles[0]._sizes = [30]
+        leg.legendHandles[1]._sizes = [30]
+        leg.legendHandles[2]._sizes = [30]
         mng = plt.get_current_fig_manager()
         mng.resize(*mng.window.maxsize())
 
         plt.figure()
-        plot_pcl(M_HDL32_PCL)
-        plot_pcl(FL_aligned)
-        plot_pcl(FR_aligned)
+        plot_pcl(M_HDL32_PCL, label="M_HDL32")
+        plot_pcl(FL_aligned, label="FL_VLP16")
+        plot_pcl(FR_aligned, label="FR_VLP16")
+        plt.title("calibrated")
+        plt.axis("equal")
+        leg = plt.legend()
+        leg.legendHandles[0]._sizes = [30]
+        leg.legendHandles[1]._sizes = [30]
+        leg.legendHandles[2]._sizes = [30]
         mng = plt.get_current_fig_manager()
         mng.resize(*mng.window.maxsize())
 
