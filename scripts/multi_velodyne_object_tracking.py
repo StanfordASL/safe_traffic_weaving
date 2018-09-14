@@ -10,6 +10,7 @@ import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2
 from auto_messages.msg import from_autobox
 from std_msgs.msg import ColorRGBA
+from safe_traffic_weaving.msg import XYThV
 
 from utils.math_utils import *
 
@@ -57,6 +58,7 @@ class x1lidar:
         self.trackedObject_pose_pub = rospy.Publisher("/tracked_object/pose", PoseStamped, queue_size=10)
         self.trackedObject_vel_pub = rospy.Publisher("/tracked_object/vel", TwistStamped, queue_size=10)
         self.trackedObject_accel_pub = rospy.Publisher("/tracked_object/acc", AccelStamped, queue_size=10)
+        self.trackedObject_xythv_pub = rospy.Publisher("/tracked_object/xythv", XYThV, queue_size=10)
         self.relevant_pc = rospy.Publisher("/tracked_object/pc_viz", Marker, queue_size=10)
         self.ellipse = rospy.Publisher("/tracked_object/ellipse_viz", Marker, queue_size=10)
 
@@ -102,7 +104,7 @@ class x1lidar:
         self.lost_count = 0
         self.processing = False
 
-    def pose_twist_accelStamped_pub(self, state, pose_pub, vel_pub, accel_pub, header_frame_id, timestamp):
+    def pose_twist_accelStamped_pub(self, state, pose_pub, vel_pub, accel_pub, xythv_pub, header_frame_id, timestamp):
         self.tf_broadcaster.sendTransform((state.position.x, state.position.y, 0), 
                                            state.orientation.to_list(),
                                            timestamp,
@@ -131,6 +133,13 @@ class x1lidar:
         accel_msg.accel.linear.x = state.position.xdd
         accel_msg.accel.linear.y = state.position.ydd
         accel_pub.publish(accel_msg)
+
+        xythv_msg = XYThV()
+        xythv_msg.x = state.position.x
+        xythv_msg.y = state.position.y
+        xythv_msg.th = np.arctan2(state.position.yd, state.position.xd)
+        xythv_msg.v = np.hypot(state.position.xd, state.position.yd)
+        xythv_pub.publish(xythv_msg)
 
 
     def x1_position(self, msg):
@@ -164,6 +173,7 @@ class x1lidar:
                                          self.trackedObject_pose_pub, 
                                          self.trackedObject_vel_pub,
                                          self.trackedObject_accel_pub,
+                                         self.trackedObject_xythv_pub,
                                          '/world', 
                                          msg_time)
         # flag to say that it has been initialized.
@@ -339,7 +349,8 @@ class x1lidar:
             self.pose_twist_accelStamped_pub(self.trackedObjectState, 
                                              self.trackedObject_pose_pub, 
                                              self.trackedObject_vel_pub, 
-                                             self.trackedObject_accel_pub, 
+                                             self.trackedObject_accel_pub,
+                                             self.trackedObject_xythv_pub, 
                                              header_frame_id = '/world',
                                              timestamp=msg_time)
         self.processing = False
