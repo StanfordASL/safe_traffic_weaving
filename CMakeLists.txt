@@ -56,6 +56,7 @@ add_message_files(
   PredictionInput.msg
   PredictionOutput.msg
   XYThV.msg
+  path.msg
   VehicleTrajectory.msg
   Float32MultiArrayStamped.msg
 )
