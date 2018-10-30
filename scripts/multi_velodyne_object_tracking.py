@@ -238,7 +238,6 @@ class x1lidar:
         else:
             self.dt = dt
 
-        self.prev_time = msg_time.to_time()
         if self.initialize_flag:
             self.tf_broadcaster.sendTransform((self.initial_state.position.x, self.initial_state.position.y, 0.0),
                                                self.initial_state.orientation.to_list(), 
@@ -259,7 +258,7 @@ class x1lidar:
 
             distance = np.hypot(self.trackedObjectState.position.x - self.x1State.pose.position.x, 
                                 self.trackedObjectState.position.y - self.x1State.pose.position.y)
-            sd_tol = 2*sd if distance > 5 else sd
+            sd_tol = 2*max(distance/5, 1)*sd
             # trackedObjectPoints_velodyne = self.tf_listener.transformPoint("/velodyne", pt)
             try:
                 self.tf_listener.waitForTransform(msg_frame, "/world", msg_time, rospy.Duration(.05))
@@ -346,6 +345,7 @@ class x1lidar:
                                              self.trackedObject_xythv_pub, 
                                              header_frame_id = '/world',
                                              timestamp=msg_time)
+            self.prev_time = msg_time.to_time()
 
     def diff_angle(self, t1, t2):
         if np.sign(t1*t1) >= 0:
