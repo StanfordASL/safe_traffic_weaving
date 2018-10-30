@@ -4,7 +4,7 @@ import numpy as np
 import tf
 import tf.msg
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
-from geometry_msgs.msg import PoseStamped, Quaternion, AccelStamped, TwistStamped, TransformStamped, PointStamped, Point
+from geometry_msgs.msg import PoseWithCovarianceStamped, PoseStamped, Quaternion, AccelStamped, TwistStamped, TransformStamped, PointStamped, Point
 from visualization_msgs.msg import Marker
 import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2
@@ -65,7 +65,7 @@ class x1lidar:
         # in world frame
         # self.x1_marker_pub = rospy.Publisher("/x1/marker", Marker, queue_size=10)
         rospy.Subscriber("/x1/pose", PoseStamped, self.x1_position)
-        rospy.Subscriber("/move_base_simple/goal", PoseStamped, self.initialize_trackedObject)
+        rospy.Subscriber("/initialpose", PoseWithCovarianceStamped, self.initialize_trackedObject)
         
         # rospy.Subscriber("/M_HDL32/velodyne_points", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
         rospy.Subscriber("/M_intensity_filter/output", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
@@ -153,12 +153,11 @@ class x1lidar:
         self.prev_time = msg.header.stamp.to_time()
         try:
             self.tf_listener.waitForTransform("/world", msg_frame, msg_time, rospy.Duration(.5))
-            pose_world = self.tf_listener.transformPose("/world", msg)
+            pose_world = self.tf_listener.transformPose("/world", PoseStamped(msg.header, msg.pose.pose))
 
         except:
             rospy.logwarn("Could not transform from vehicle base to World coordinates")
 
-        # pose_world = self.tf_listener.transformPose('/world', msg)
         ori = Orientation([pose_world.pose.orientation.x, 
                            pose_world.pose.orientation.y, 
                            pose_world.pose.orientation.z, 
