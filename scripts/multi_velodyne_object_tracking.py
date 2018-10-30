@@ -47,7 +47,7 @@ class State:
 
 class x1lidar:
 
-    def __init__(self, intensity_tol=100):
+    def __init__(self, intensity_tol=50):
         self.intensity_tol = intensity_tol
         self.tf_broadcaster = tf.TransformBroadcaster()
         self.tf_listener = tf.TransformListener()
@@ -293,7 +293,7 @@ class x1lidar:
                     # xy[0]**2*inv_var_rot[0,0] + xy[1]**2*inv_var_rot[1,1] + 2*xy[0]*xy[1]*inv_var_rot[1,0]
                     # rospy.logwarn("intensity tolerance met")
                     if dist < sd_tol**2: 
-                        intensity_frac = max(p[2] / intensity_max, 1)
+                        intensity_frac = min((1.0 * p[2]) / intensity_max, 1)
                         self.pc_marker.colors.append(ColorRGBA(1 - intensity_frac, intensity_frac, 0.0, 1.0))
                         self.pc_marker.points.append(Point(p[0], p[1], 0))
                         x_list.append(p[0])
