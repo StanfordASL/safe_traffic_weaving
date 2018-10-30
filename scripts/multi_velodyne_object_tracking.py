@@ -74,6 +74,9 @@ class x1lidar:
         # rospy.Subscriber("/FR_VLP16/velodyne_points", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
         rospy.Subscriber("/FR_intensity_filter/output", PointCloud2, self.pc2_callback, queue_size=1, buff_size=2**24)
 
+        self.combined_pointcloud_pub = rospy.Publisher("/EKF_input_pointclouds", PointCloud2, queue_size=10)
+        rospy.Subscriber("/EKF_input_pointclouds", PointCloud2, self.apply_msg_filtering_update, queue_size=3, buff_size=2**24)
+
         # pc array marker
         self.pc_marker = Marker()
         self.pc_marker.ns = "considered_pc"
@@ -102,7 +105,6 @@ class x1lidar:
         self.prev_time = 0      # to be overwritten
         self.curr_time = 0.1    # to be overwritten
         self.lost_count = 0
-        self.processing = False
 
     def pose_twist_accelStamped_pub(self, state, pose_pub, vel_pub, accel_pub, xythv_pub, header_frame_id, timestamp):
         self.tf_broadcaster.sendTransform((state.position.x, state.position.y, 0), 
@@ -209,15 +211,12 @@ class x1lidar:
         y = np.stack([y1,y2])
         return np.dot(LHinv, y)
 
-
+    def pc2_callback(self, msg):
+        self.combined_pointcloud_pub.publish(msg)
 
     # tracking the other car
-    def pc2_callback(self, msg, min_points = 2, vel_tol = 0.1, alpha = 0.95, sd = 3.0):
+    def apply_msg_filtering_update(self, msg, min_points = 2, vel_tol = 0.1, alpha = 0.95, sd = 3.0):
         intensity_max = 500
-        
-        if self.processing:
-            rospy.logwarn("Callback is busy")
-            return
 
         rospy.loginfo("Receiving points from velodyne %s", msg.header.frame_id)
         msg_time = msg.header.stamp
@@ -235,14 +234,12 @@ class x1lidar:
             dt = 0.1
         if dt < 0:
             rospy.logwarn("Message is too old")
-            self.processing = False
             return
         else:
             self.dt = dt
 
         self.prev_time = msg_time.to_time()
         if self.initialize_flag:
-            self.processing = True
             self.tf_broadcaster.sendTransform((self.initial_state.position.x, self.initial_state.position.y, 0.0),
                                                self.initial_state.orientation.to_list(), 
                                                msg_time,
@@ -274,7 +271,6 @@ class x1lidar:
                 inv_var_rot = np.matmul(np.matmul(R, inv_xy_var),R.T)
             except:
                 rospy.logwarn("Could not transform from World to Velodyne coordinates")
-                self.processing = False
                 return
    
             center = np.array([[self.trackedObjectState.position.x], [self.trackedObjectState.position.y]])
@@ -306,7 +302,6 @@ class x1lidar:
                 self.lost_count += 1
                 if self.lost_count > 3:
                     rospy.logwarn("Robot is lost in %s", msg.header.frame_id)
-                # self.processing = False
                 obs = None
             else: 
                 self.lost_count = 0
@@ -322,7 +317,6 @@ class x1lidar:
                     obs_world_point = self.tf_listener.transformPoint("/world", obs_velodyne_point)
                 except:
                     rospy.logwarn("Could not transform from Velodyne to World coordinates")
-                    self.processing = False
                     return
 
                 # obs_world_point = self.tf_listener.transformPoint("/world", obs_velodyne_point)
@@ -352,7 +346,6 @@ class x1lidar:
                                              self.trackedObject_xythv_pub, 
                                              header_frame_id = '/world',
                                              timestamp=msg_time)
-        self.processing = False
 
     def diff_angle(self, t1, t2):
         if np.sign(t1*t1) >= 0:
