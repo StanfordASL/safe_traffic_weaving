@@ -30,6 +30,8 @@ import visualization_msgs.msg: Marker, MarkerArray
 
 include("utils/utils.jl")
 
+init_node("xbox_car", anonymous=true)
+
 const terminate_pub = Publisher{BoolMsg}("/terminate", queue_size=10)
 const reset_pub = Publisher{BoolMsg}("/reset", queue_size=1)
 const reset_sim_pub = Publisher{BoolMsg}("/reset_sim", queue_size=1)
@@ -73,13 +75,20 @@ function joystick_callback(msg::Joy, sim_state::SimulatorState)
     dt = sim_state.prev_joystick_time == 0 ? 0.0 : curr_joystick_time - sim_state.prev_joystick_time
     sim_state.prev_joystick_time = curr_joystick_time
 
+    # terminate (end joy stick node)
     if msg.buttons[1] == 1 && msg.buttons[2] == 1    # A and B (green and red)
+        println("Terminate xbox controller")
         publish(terminate_pub, BoolMsg(true))
         sim_state.terminate = true
     end
+
+    # toggle offset
     if msg.buttons[3] == 1                           # X (blue)
+        println("Toggle offset mode")
         sim_state.x0_offset_mode = !sim_state.x0_offset_mode
     end
+
+
     if msg.buttons[4] == 1                           # Y (yellow)
         sim_state.x = sim_state.x0
         if sim_state.x0_offset_mode
@@ -97,24 +106,36 @@ function joystick_callback(msg::Joy, sim_state::SimulatorState)
         end
         sim_state.u = zeros(sim_state.u)
     end
+
+    # robot right lane, human left lane
     if msg.buttons[5] == 1                           # left bumper
+        println("Robot in right lane")
         RobotOS.set_param("robot_start_lane", "R")
         RobotOS.set_param("human_start_lane", "L")
     end
+    # robot left lane, human right lane
     if msg.buttons[6] == 1                           # right bumper
+        println("Robot in left lane")
         RobotOS.set_param("robot_start_lane", "L")
         RobotOS.set_param("human_start_lane", "R")
     end
+
+    # reset sim
     if msg.buttons[7] == 1                           # select
+        println("Reset experiment")
         for i in 1:5
             rate = Rate(100)
             publish(reset_sim_pub, BoolMsg(true))
             rossleep(rate)
         end
     end
+
+    # reset path -- track straight line (at the start of the experiment)
     if msg.buttons[8] == 1                           # start
+        println("Start experiment")
         publish(reset_pub, BoolMsg(true))
     end
+
     if sim_state.x0_offset_mode
         if norm(msg.axes[4:5]) > .1
             sim_state.x0 = SE2vState(sim_state.x0.x + msg.axes[5]*5*dt,
@@ -135,7 +156,7 @@ function joystick_callback(msg::Joy, sim_state::SimulatorState)
                                                MAX_CURVATURE*msg.axes[1]/x_scale_factor)
 end
 
-init_node("xbox_car", anonymous=true)
+
 
 const sim_state = SimulatorState(false, zeros(SE2vState{Float64}), zeros(AccelerationCurvatureControl{Float64}), zeros(SE2vState{Float64}), 0.0, true, 0.0)
 const x0_sub = Subscriber{XYThV}("/xbox_car/set_init", initial_state_callback, (sim_state,), queue_size=10)
