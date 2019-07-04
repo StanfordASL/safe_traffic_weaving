@@ -13,37 +13,49 @@ from auto_messages.msg import from_autobox
 class WallVisualization(object):
     def __init__(self, roadway_name):
         rospy.init_node("wall_visualization", anonymous=True)
-        self.pub = rospy.Publisher("/{0}/wall".format(roadway_name), Marker, queue_size=10, latch=True)
+        self.pub = rospy.Publisher("/{0}/wall".format(roadway_name), MarkerArray, queue_size=10, latch=True)
         self.tf_broadcaster = tf2_ros.TransformBroadcaster()
 
         roadway = rospy.get_param(roadway_name)
+        wall_boundary_distance = rospy.get_param("wall_boundary_distance")
         x0 = np.array(roadway["start_mid"])
         w = roadway["lane_width"]
         l = roadway["length"]
         th = roadway["angle"]
         ns, nt = rot_unit_vectors(th)
 
-        road_marker = straight_roadway_marker(roadway)
-
-        x0[0] += 1.2 * w * np.sin(th)
-        x0[1] -= 1.2 * w * np.cos(th)
-        x1 = x0 + ns * w
+        x0[0] += wall_boundary_distance * w * np.sin(th)
+        x0[1] -= wall_boundary_distance * w * np.cos(th)
         wall = [-np.sin(th), np.cos(th), np.sin(th) * x0[0] - np.cos(th) * x0[1], th]
 
         self.wall_transform_msg = TransformStamped()
         self.wall_transform_msg.header.frame_id = "world"
-        self.wall_transform_msg.child_frame_id = "wall"
+        self.wall_transform_msg.child_frame_id = "right_wall"
         self.wall_transform_msg.transform.translation.x = x0[0]
         self.wall_transform_msg.transform.translation.y = x0[1]
         self.wall_transform_msg.transform.rotation = th_to_quat(roadway["angle"])
 
-        self.marker = colored_marker("lime", 1.0)
-        self.marker.header.frame_id = "wall"
-        self.marker.ns = "wall"
-        self.marker.type = Marker.LINE_STRIP
-        self.marker.scale.x = 0.5
-        self.marker.points = [Point(-5., 0., 0.), Point(5., 0., 0.)]
-        self.marker.frame_locked = True
+
+        right_wall_marker = colored_marker("lime", 1.0)
+        right_wall_marker.header.frame_id = "right_wall"
+        right_wall_marker.ns = "right_wall"
+        right_wall_marker.type = Marker.LINE_STRIP
+        right_wall_marker.scale.x = 0.5
+        right_wall_marker.points = [Point(-500., 0., 0.), Point(500., 0., 0.)]
+        right_wall_marker.frame_locked = True
+
+
+        left_wall_marker = colored_marker("lime", 1.0)
+        left_wall_marker.header.frame_id = "right_wall"
+        left_wall_marker.ns = "left_wall"
+        left_wall_marker.type = Marker.LINE_STRIP
+        left_wall_marker.scale.x = 0.5
+        dy = 2 * wall_boundary_distance * w
+        left_wall_marker.points = [Point(-500., dy, 0.), Point(500., dy, 0.)]
+        left_wall_marker.frame_locked = True
+
+        self.marker_array = MarkerArray([right_wall_marker, left_wall_marker])
+
 
         rospy.Subscriber("/from_autobox", from_autobox, self.fromVehCallback, (wall))
 
@@ -58,9 +70,9 @@ class WallVisualization(object):
         self.wall_transform_msg.transform.translation.y = y_wall
         self.wall_transform_msg.header.stamp = stamp
         self.tf_broadcaster.sendTransform(self.wall_transform_msg)
-
-        self.marker.header.stamp = stamp
-        self.pub.publish(self.marker)
+        for m in self.marker_array.markers:
+            m.header.stamp = stamp
+        self.pub.publish(self.marker_array)
 
 
     def run(self):

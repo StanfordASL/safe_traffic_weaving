@@ -7,6 +7,7 @@
     <arg name="hwy_split_frac" default="0.8" />
     <arg name="time_scale_factor" default="0.5" />
     <arg name="map_origin_frame" default="roadway/start_mid" />
+    <arg name="wall_boundary_distance" default="1.6"/>
 
     <param name="human" value="$(arg human)" />
     <param name="robot" value="$(arg robot)" />
@@ -14,6 +15,7 @@
     <param name="hwy_start_frac" value="$(arg hwy_start_frac)" />
     <param name="hwy_split_frac" value="$(arg hwy_split_frac)" />
     <param name="time_scale_factor" value="$(arg time_scale_factor)" />
+    <param name="wall_boundary_distance" value="$(arg wall_boundary_distance)" />
 
     <node
         pkg="tf"
