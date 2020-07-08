@@ -69,6 +69,12 @@
         name="experiment_start_pub"
     />
 
+    <node
+        pkg="safe_traffic_weaving"
+        type="viz_wall.py"
+        name="wall_visualization"
+    />
+
     <node pkg="joy" type="joy_node" name="xbox_joystick">
         <param name="autorepeat_rate" value="30.0" />
         <param name="deadzone" value="0.2" />

@@ -28,7 +28,8 @@ def unstandardize(tensor, mean, std, include_bias=True):
 def score_trajectories(y, car1, car2, traj_length, car1_future):
     k, bs, _, _ = tf.unstack(tf.shape(y))
     ph = y.shape[2].value
-    with tf.variable_scope("scoring"):
+    # with tf.variable_scope("scoring"):
+    with tf.compat.v1.variable_scope("scoring"):
         curr_step = traj_length - 1
         car2_present = tf.expand_dims(tf.expand_dims(car2[:,curr_step,:], 0), 0)        # [1, 1, 1, 6]
         car2_present_p, car2_present_v, car2_present_a = tf.split(car2_present, 3, axis=3)                     # [1, 1, 1, 2]x3
@@ -48,7 +49,7 @@ def score_trajectories(y, car1, car2, traj_length, car1_future):
         dx_danger, dy_danger = 8/x_scale_factor, 2
         r_danger = np.hypot(dx_danger, dy_danger)
         cars_close = tf.reduce_all(tf.abs(delta_p) < [dx_danger, dy_danger], axis=-1)              # [k, bs, ph]
-        prox_penalty = -1000*tf.to_float(cars_close)*(1 + r_danger - tf.norm(delta_p, axis=-1))    # [k, bs, ph]
+        prox_penalty = -1000*tf.cast(cars_close, tf.float32)*(1 + r_danger - tf.norm(delta_p, axis=-1))    # [k, bs, ph]
 
         # time of crossover reward (maybe delta_x should be adjusted for car length)
         delta_v = car2_future_v - car1_future_v            # [k, bs, ph, 2]
@@ -99,12 +100,16 @@ class Scorer(object):
 
     def __init__(self):
         with tf.Graph().as_default() as g:
-            self.sess = tf.Session()
+            # self.sess = tf.Session()
+            self.sess = tf.compat.v1.Session()
             print("Loading model from: " + model_dir)
             print("** Using Hindsight Optimization Policy **")
+            # tf.saved_model.loader.load(self.sess,
+            #                            [tf.saved_model.tag_constants.SERVING],
+            #                            model_dir)
             tf.saved_model.loader.load(self.sess,
-                                       [tf.saved_model.tag_constants.SERVING],
-                                       model_dir)
+                           [tf.saved_model.SERVING],
+                           model_dir)
             self.y = g.get_tensor_by_name("outputs/y:0")                        # [k, bs, ph, 2]
             self.z = g.get_tensor_by_name("outputs/z:0")                        # [k, bs, N?]
             self.car1 = g.get_tensor_by_name("car1:0")

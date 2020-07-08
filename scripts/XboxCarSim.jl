@@ -48,6 +48,7 @@ const listener = tf2_ros.TransformListener(tfBuffer)
 const time_scale_factor = RobotOS.get_param("time_scale_factor", 1.0)
 const x_scale_factor = RobotOS.get_param("x_scale_factor", 1.0)
 
+
 @show time_scale_factor
 @show x_scale_factor
 
@@ -152,8 +153,40 @@ function joystick_callback(msg::Joy, sim_state::SimulatorState)
     end
     accel_frac = (1 - msg.axes[6])/2
     brake_frac = (1 - msg.axes[3])/2
+
+
+    # hacky way to make the human drive the same way each trial.
+    # steering = 0.0 
+    # # println(sim_state.x.x)
+    # if (300 < sim_state.x.y < 301) & (msg.buttons[2] == 1)
+    #     steering = -0.5
+    #     println("swerve 1")
+
+    # elseif (310 < sim_state.x.y < 311) & (msg.buttons[2] == 1)
+    #     steering = -0.7
+    #     println("swerve 2")
+
+
+    # elseif (330 < sim_state.x.y < 331) & (msg.buttons[2] == 1)
+    #     steering = 0.7
+    #     println("swerve 3")
+
+
+    # elseif (340 < sim_state.x.y < 341)  & (msg.buttons[2] == 1)
+    #     steering = 0.5
+    #     println("swerve 3")
+    # else
+    #     # println("stay straight")
+    #     steering = msg.axes[1]
+    # end
+    # sim_state.u = AccelerationCurvatureControl((MAX_LONGITUDINAL_ACC*accel_frac + MAX_LONGITUDINAL_BRAKE*brake_frac)*x_scale_factor*time_scale_factor^2,
+    #                                            MAX_CURVATURE*steering/x_scale_factor)
+
+
+
     sim_state.u = AccelerationCurvatureControl((MAX_LONGITUDINAL_ACC*accel_frac + MAX_LONGITUDINAL_BRAKE*brake_frac)*x_scale_factor*time_scale_factor^2,
                                                MAX_CURVATURE*msg.axes[1]/x_scale_factor)
+
 end
 
 

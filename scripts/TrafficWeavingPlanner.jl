@@ -189,6 +189,7 @@ function run(;start_wait=8, computation_interval=3)
     while !planner_state.terminate
         @assert length(planner_state.human) == length(planner_state.robot)
         Tnew = min(last_common_time(planner_state.human_buffer), last_common_time(planner_state.robot_buffer))
+        # during the "ramp up" period where the human is just moving straight and is not being freely controlled. 
         if isempty(planner_state.human)
             # t_now = Float64(RobotOS.now())
             # push!(planner_state.robot_buffer.pos, t_now, [-138.2, -6.0940447])
@@ -208,6 +209,7 @@ function run(;start_wait=8, computation_interval=3)
                 println("brute-force catching our way past race conditions (1)")
                 continue
             end
+            # Find a reasonable start time, the time when the human starts being controlled, past the start line
             A, B = Tfirst, Tnew
             Tstart = (A + B)/2
             for i in 1:10
